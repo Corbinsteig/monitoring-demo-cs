@@ -12,30 +12,60 @@ let rollbar = new Rollbar({
 })
 
 // record a generic message and send it to Rollbar
-rollbar.log('Hello world!')
+// rollbar.log("Hello world!");
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../index.html'))
-    rollbar.info('html file served successfully.')
+app.use(express.json());
+
+// student data
+const students = [ 'jimmy', 'timothy', 'jimothy']
+
+// endpoints
+app.get('/', function(req, res) {
+    res.sendFile(path.join(__dirname, '/public/index.html'))
 })
 
-
-let students = []
-
-app.post('/api/student', (req, res)=>{
-    let {name} = req.body
-    name = name.trim()
-
-    students.push(name)
-
-    rollbar.log('Student added successfully', {author: 'Scott', type: 'manual entry'})
-
+app.get('/api/students', (req, res) => {
+    rollbar.info('Someone got the list of students on page load')
     res.status(200).send(students)
 })
 
-// Let's also add some top-level middleware that will track any errors that occur in our server:
-app.use(rollbar.errorHandler())
+app.post('/api/students', function(req, res) {
+    let { name } = req.body;
+    
+    const index = students.findIndex((student) => {
+        return student === name
+    })
 
-const port = process.env.PORT || 4545
+    try {
+        if (index === -1 && name !== "") {
+          students.push(name);
+          rollbar.info('Someone added a student')
+          res.status(200).send(students);
+        } else if (name === "") {
+            rollbar.error('Someone tried to enter a blank student')
 
-app.listen(port, () => console.log(`Take us to warp ${port}!`))
+            res.status(400).send("must provide a name");
+        } else {
+            rollbar.error('Someone tried to enter a duplicate student name')
+          res.status(400).send("that student already exists");
+        }
+      } catch (err) {
+        console.log(err)
+        rollbar.error(err)
+      }
+})
+
+app.delete('/api/students/:index', (req, res) => {
+    const targetIndex = +req.params.index
+
+    students.splice(targetIndex, 1);
+
+    rollbar.info('Someone deleted a student')
+    res.status(200).send(students)
+})
+
+const port = process.env.PORT || 4545;
+
+app.listen(port, function() {
+    console.log(`Server rocking out on ${port}`)
+})

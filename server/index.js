@@ -36,11 +36,20 @@ app.post('/api/student', (req, res)=>{
     let {name} = req.body
     name = name.trim()
 
-    students.push(name)
+    const index = students.findIndex(studentName=> studentName === name)
 
-    rollbar.log('Student added successfully', {author: 'Scott', type: 'manual entry'})
+    if(index === -1 && name !== ''){
+        students.push(name)
+        rollbar.log('Student added successfully', {author: 'Scott', type: 'manual entry'})
+        res.status(200).send(students)
+    } else if (name === ''){
+        rollbar.error('No name given')
+        res.status(400).send('must provide a name.')
+    } else {
+        rollbar.error('student already exists')
+        res.status(400).send('that student already exists')
+    }
 
-    res.status(200).send(students)
 })
 
 // Let's also add some top-level middleware that will track any errors that occur in our server:
